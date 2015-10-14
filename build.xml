@@ -1,0 +1,140 @@
+<!--
+File diff tool for build server with ant build script
+Author: Bhargav Nunna
+Required: Apache Ant, Python27, digisig.exe 
+Works on windows platform. Resuires work around for linux pltoforms.
+Usage: $ant [location of latest build] [location of previous build]
+contact for more info: bhargav.vmf33@gmail.com
+
+-->
+
+
+<?xml version="1.0"?>
+<project name="Bin" default="foo" xmlns:c="antlib:it.haefelinger.flaka">
+
+<taskdef resource="net/sf/antcontrib/antlib.xml"/>
+<property name="serversrc" value="${newVer}" />      <!--new/current version C:\Users\Bhargav\Desktop\amazon_hw-->
+<property name="serversrc2" value="${preVer}" />   <!--previous version C:\Users\Bhargav\Desktop\amazon_hw_1-->
+
+
+<target name="foo">
+  <dirset dir="${serversrc}" id="foobar" />
+  <echo message="Reading first source..."/>
+  <echo file="dir.txt" message="${toString:foobar}" />
+  <loadfile property="file" srcfile="dir.txt"/>
+  <delete file="diffout.xml"/>
+  <echo file="simple1.xml" message="&lt;contents&gt;" append="true"/>
+  <var name="local" value="${serversrc}" />
+  <for param="line" list="${file}" delimiter=";">
+    <sequential>
+      <!--echo message="${local}@{line}" /-->
+      <local name="path"/>
+      <property name="path" value="${local}@{line}"/>
+    </sequential>
+  </for>
+    <foreach target="bar" param="theFile">
+      <fileset dir="${serversrc}" casesensitive="yes">
+      <include name="**/*.*"/>
+      </fileset>
+    </foreach>
+  <echo file="simple1.xml" message="&lt;/contents&gt;" append="true"/>
+  <antcall target="foo2"/>
+  <antcall target="diff"/>
+</target>
+
+
+
+<target name="bar">
+  <echo file="simple1.xml" message="&lt;file&gt;${line.separator}" append="true"/>
+  <basename property="cmdname" file="${theFile}" />
+  <!--echo message="${theFile} ${line.separator}"/-->
+  <echo file="simple1.xml" message="&lt;name&gt;${cmdname}&lt;/name&gt;${line.separator}" append="true"/>
+  <propertyregex property="converted.path"
+               input="${theFile}"
+               regexp="${regNew}"
+               replace=""
+               global="true" /><!--new/current version   C:\\Users\\Bhargav\\Desktop\\amazon_hw-->
+  <echo file="simple1.xml" message="&lt;path&gt;${converted.path}&lt;/path&gt; ${line.separator}" append="true"/>
+  <checksum file="${theFile}" property="foobarMD5" /> 
+  <echo file="simple1.xml" message="&lt;hash&gt;${foobarMD5}&lt;/hash&gt; ${line.separator}" append="true"/>
+  <length file="${theFile}" property="filelenght" />
+  <echo file="simple1.xml" message="&lt;size&gt;${filelenght}&lt;/size&gt; ${line.separator}" append="true"/>
+
+  <exec executable="DigiSig">
+    <arg value="${theFile}" />
+    <arg value="simple1.xml" />
+  </exec>
+ 
+  <echo file="simple1.xml" message="&lt;/file&gt;${line.separator}" append="true"/>
+</target>
+
+
+
+<target name="foo2">
+  <dirset dir="${serversrc2}" id="foobar" />
+  <echo message="Reading second source..."/>
+  <echo file="dir2.txt" message="${toString:foobar}" />
+  <loadfile property="file" srcfile="dir2.txt"/>
+  <delete file="simple2.xml"/>
+  <echo file="simple2.xml" message="&lt;contents&gt;" append="true"/>
+  <var name="local" value="${serversrc2}" />
+  <for param="line" list="${file}" delimiter=";">
+    <sequential>
+      <!--echo message="${local}@{line}" /-->
+      <local name="path"/>
+      <property name="path" value="${local}@{line}"/>
+    </sequential>
+  </for>
+    <foreach target="bar2" param="theFile">
+      <fileset dir="${serversrc2}" casesensitive="yes">
+      <include name="**/*.*"/>
+      </fileset>
+    </foreach>
+  <echo file="simple2.xml" message="&lt;/contents&gt;" append="true"/>
+</target>
+
+
+
+<target name="bar2">
+  <echo file="simple2.xml" message="&lt;file&gt;${line.separator}" append="true"/>
+  <basename property="cmdname" file="${theFile}" />
+  <!--echo message="${theFile} ${line.separator}"/-->
+  <echo file="simple2.xml" message="&lt;name&gt;${cmdname}&lt;/name&gt;${line.separator}" append="true"/>
+  <propertyregex property="converted.path"
+               input="${theFile}"
+               regexp="${regPrev}" 
+               replace=""
+               global="true" /><!--previous version  C:\\Users\\Bhargav\\Desktop\\amazon_hw_1-->
+  <echo file="simple2.xml" message="&lt;path&gt;${converted.path}&lt;/path&gt; ${line.separator}" append="true"/>
+  <checksum file="${theFile}" property="foobarMD5" /> 
+  <echo file="simple2.xml" message="&lt;hash&gt;${foobarMD5}&lt;/hash&gt; ${line.separator}" append="true"/>
+  <length file="${theFile}" property="filelenght" />
+  <echo file="simple2.xml" message="&lt;size&gt;${filelenght}&lt;/size&gt; ${line.separator}" append="true"/>
+ 
+  <exec executable="DigiSig" >
+    <arg value="${theFile}" />
+    <arg value="simple2.xml" />
+  </exec>
+
+  <echo file="simple2.xml" message="&lt;/file&gt;${line.separator}" append="true"/>
+</target>
+
+
+
+<target name="diff">
+  <echo message="Generating Diff reports.."/>
+  <exec executable="python" dir="${basedir}">
+    <arg value="filesdiff.py"/>
+    <arg value="simple1.xml"/>
+    <arg value="simple2.xml"/>
+  </exec>
+  <echo message="Cleaning up.."/>
+  <delete file="digsig.xml"/>
+  <delete file="dir.txt"/>
+  <delete file="dir2.txt"/>
+  <delete file="simple1.xml"/>
+  <delete file="simple2.xml"/>
+</target>
+
+
+</project>
